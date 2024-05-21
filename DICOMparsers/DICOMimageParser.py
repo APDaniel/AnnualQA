@@ -1,6 +1,7 @@
 import logging
 import math
 from turtle import color
+from venv import logger
 import numpy as np
 from numpy import angle, uint8 
 import pydicom
@@ -496,7 +497,7 @@ class DicomImageParser:
         self.logger.info(f'Distance={distance} mm')
         return distance
     
-    def findLeafPixels(self,image,ax,cornerCoordinates,rectangleCoordinates, thresholdPercent,pixelSampling,magnificationFactor):
+    def findLeafPixels(self,image,ax,cornerCoordinates,rectangleCoordinates, thresholdPercent,pixelSampling,magnificationFactor,reportLeaves):
         maxIntensity=np.max(image)
         thresholdValue=maxIntensity*thresholdPercent/100
         
@@ -630,11 +631,11 @@ class DicomImageParser:
                     [midPoints[1][0],midPoints[1][1]]),2)
                 
                 self.logger.info(f'Leaf number {leafNumber}, angle deviation is {angle} deg')
-
-
-
+                reportLeaves[f'{leafBank}-{leafNumber}']=angle
 
     def showImageWithJawLeafPositionsAndCalculateDeviations(self):
+        #Generate list for reporting
+        report={}
         #Display the image stored in the DICOM file with jaw positions shown
         if not self.dataset or 'PixelData' not in self.dataset:
             self.logger.error("Unable to isplay image. No DICOM file loaded of no pixel data found")
@@ -659,8 +660,14 @@ class DicomImageParser:
 
         #Draw jaw positions
         jawInMm=self.findAbsoluteJawPositions()
+        report['JawSize']=jawInMm
+        
         collimatorAngle=self.findCollimatorAngle()
+        report['COL']=collimatorAngle
+
         sidSadTuple=self.findSIDandSAD()
+        report['SID,SAD']=sidSadTuple
+        
         magnificationFactor=sidSadTuple[0]/sidSadTuple[1]
         
         pixelSampling=self.findImagePlanePixelSpacing()
@@ -689,9 +696,16 @@ class DicomImageParser:
         
         test=self.calculateAngleAndDistance(rectangleCoordinates,detectedJawPositionsDictionary,pixelSampling,magnificationFactor)  
         self.logger.info(f'Angle and distance deviations captured: {test}')
+        report['JawDiscrepancies:']=test
         
         #Show leaves detected on the image
-        self.findLeafPixels(image,ax,detectedJawPositionsDictionary, rectangleCoordinates, 47,pixelSampling,magnificationFactor)
+        reportLeaves={}
+        self.findLeafPixels(image,ax,detectedJawPositionsDictionary, rectangleCoordinates, 47,pixelSampling,magnificationFactor,reportLeaves)
+        reportLeavesSorted=dict(sorted(reportLeaves.items(),key=lambda item: item[1], reverse=True))
+        self.logger.info('**********Report*********')
+        self.logger.info(report)
+        self.logger.info(reportLeaves)
+        
         
         ax.imshow(image,cmap='jet')
         plt.axis('on')        
