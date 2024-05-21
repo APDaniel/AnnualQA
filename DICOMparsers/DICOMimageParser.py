@@ -690,7 +690,7 @@ class DicomImageParser:
         test=self.calculateAngleAndDistance(rectangleCoordinates,detectedJawPositionsDictionary,pixelSampling,magnificationFactor)  
         self.logger.info(f'Angle and distance deviations captured: {test}')
         
-        #Show leaves detected on the image:
+        #Show leaves detected on the image
         self.findLeafPixels(image,ax,detectedJawPositionsDictionary, rectangleCoordinates, 47,pixelSampling,magnificationFactor)
         
         ax.imshow(image,cmap='jet')
