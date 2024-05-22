@@ -3,7 +3,7 @@ import math
 from turtle import color
 from venv import logger
 import numpy as np
-from numpy import angle, uint8 
+from numpy import angle, linalg, uint8 
 import pydicom
 import matplotlib.pyplot as plt
 from typing import Dict
@@ -128,6 +128,13 @@ class DicomImageParser:
         else:
             self.logger.warning('No pixel spacing captured')
             return 
+
+    def findPixelSamplingAtCustomAngle(self,xSampling,ySampling,angle):
+        angleRadians=np.radians(angle)
+        cosTheta=np.cos(angleRadians)
+        sinTheta=np.sin(angleRadians)
+        effectiveSampling=np.sqrt((xSampling*np.cos(angleRadians))**2+(ySampling*np.sin(angleRadians))**2)
+        return effectiveSampling
 
     def findImagerPosition(self): #Capture imager position 
         imagerPosition=float()
@@ -497,7 +504,35 @@ class DicomImageParser:
         self.logger.info(f'Distance={distance} mm')
         return distance
     
-    def findLeafPixels(self,image,ax,cornerCoordinates,rectangleCoordinates, thresholdPercent,pixelSampling,magnificationFactor,reportLeaves):
+    def findClosestPointOnTheline(self,point,lineStart,lineEnd):
+        
+        lineVec=np.array(lineEnd)-np.array(lineStart)
+        pointVec=np.array(point)-np.array(lineStart)
+        
+        lineLength=np.linalg.norm(lineVec)
+        lineUnitVec=lineVec/lineLength
+        projection=np.dot(pointVec,lineUnitVec)
+        
+        projection=np.clip(projection,0,lineLength)
+        
+        closestPoint=np.array(lineStart)+projection*lineUnitVec
+        
+        distance=np.linalg.norm(np.array(point)-closestPoint)
+        
+        return closestPoint, distance
+    
+    def calculateDistancePointToLine(self,point,lineStart,lineEnd):
+        x0,y0=point
+        x1,y1=lineStart             
+        x2,y2=lineEnd
+        distance=np.abs((y2-y1)*x0-(x2-x1)*y0+x2*y1-y2*x1)/np.sqrt((y2-y1)**2+(x2+x1)**2)
+        return distance
+    
+    def findLeafPixels(self,image,ax,
+                       cornerCoordinates,rectangleCoordinates, 
+                       thresholdPercent,pixelSampling,
+                       magnificationFactor,collimatorAngle,
+                       reportPositioningDeviations,reportAngleDeviations):
         maxIntensity=np.max(image)
         thresholdValue=maxIntensity*thresholdPercent/100
         
@@ -608,31 +643,54 @@ class DicomImageParser:
                 ax.text(centerX,centerY+2,f'{leafBank}-{leafNumber}',color='white',fontsize=12,ha='left')
                 
                 #Plot leaf centerline
-                hullPointsNp=np.array(hullPoints,dtype=np.int32)
-                rect=cv2.minAreaRect(hullPointsNp)
-                box=cv2.boxPoints(rect)
-                box=np.int0(box)
-                polygonPatch=Polygon(box,closed=True,edgecolor='red',fill=None,linewidth=2)
-                ax.add_patch(polygonPatch)
+                centerY1jaw=((point3[0]+point4[0]))/2,((point3[1]+point4[1]))/2
+                centerY2jaw=((point1[0]+point2[0]))/2,((point1[1]+point2[1]))/2
                 
-                sideLength=[np.linalg.norm(box[i]-box[(i+1)%4]) for i in range(4)]
-                shortestSides=sorted(range(4),key=lambda i: sideLength[i])[:2]
-                midPoints=[]
-                for i in shortestSides:
-                    p1,p2=box[i],box[(i+1)%4]
-                    midpoint=((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
-                    midPoints.append(midpoint)
-                ax.plot([midPoints[0][0],midPoints[1][0]], [midPoints[0][1],midPoints[1][1]], 'r--', linewidth=1)
+                sideMidpoints=[]          
+                distances=[]
+                for i in range(len(hullPoints)):
+                    p1=hullPoints[i]
+                    p2=hullPoints[(i+1)%len(hullPoints)]
+                    midpoint=np.mean([p1,p2],axis=0)
+                    if leafBank=='A':
+                        closestPoint,distance=self.findClosestPointOnTheline(midpoint,point1,point3)
+                    elif leafBank=='B':
+                        closestPoint,distance=self.findClosestPointOnTheline(midpoint,point2,point4) 
+                    sideMidpoints.append(midpoint)
+                    distances.append(distance)
 
-                angle=round(self.calculateAngleBetweenLinesWithDifferentLength(
-                    (point1rectangle[0],point1rectangle[1]),
-                    (point2rectangle[0],point2rectangle[1]),
-                    [midPoints[0][0],midPoints[0][1]], 
-                    [midPoints[1][0],midPoints[1][1]]),2)
+                closestSideIndex=np.argmin(distances)
+                closestDistance=distances[closestSideIndex]
+                farthestSideIndex=np.argmax(distances)
                 
-                self.logger.info(f'Leaf number {leafNumber}, angle deviation is {angle} deg')
-                reportLeaves[f'{leafBank}-{leafNumber}']=angle
+                closestMidpoint=sideMidpoints[closestSideIndex]
+                farthestMidpoint=sideMidpoints[farthestSideIndex]
 
+                closestX=closestMidpoint[0]
+                farthestX=farthestMidpoint[0]
+                closestY=closestMidpoint[1]
+                farthestY=farthestMidpoint[1]
+                _,distancToIsoCenterline=self.findClosestPointOnTheline(closestMidpoint,centerY1jaw,centerY2jaw)
+                
+                
+                
+                ax.plot([closestX,farthestX],
+                        [closestY,farthestY],
+                        'r--',linewidth=1)
+
+                #Find angle between the centerline and predicted jaw
+                angleDeviation=self.calculateAngleBetweenLinesWithDifferentLength([closestX,closestY],
+                                                                                  [farthestX,farthestY],
+                                                                                  point1rectangle,
+                                                                                  point2rectangle)
+                
+                #Find distance deviation for the leaf and update the report
+                distancToIsoCenterlineMm=distancToIsoCenterline*self.findPixelSamplingAtCustomAngle(pixelSampling[0],pixelSampling[1],collimatorAngle+angleDeviation)
+                reportPositioningDeviations[f'{leafBank}-{leafNumber} positioning deviation:']=f'{round(distancToIsoCenterlineMm,2)}mm'
+                reportAngleDeviations[f'{leafBank}-{leafNumber} angle deviation:']=f'{round(angleDeviation,2)}deg'
+    
+                
+                
     def showImageWithJawLeafPositionsAndCalculateDeviations(self):
         #Generate list for reporting
         report={}
@@ -694,17 +752,24 @@ class DicomImageParser:
                                               1,1,1,1,
                                               'X1jawDet','X2jawDet','Y1jawDet','Y2jawDet')
         
-        test=self.calculateAngleAndDistance(rectangleCoordinates,detectedJawPositionsDictionary,pixelSampling,magnificationFactor)  
-        self.logger.info(f'Angle and distance deviations captured: {test}')
-        report['JawDiscrepancies:']=test
+        jawDiscrepancies=self.calculateAngleAndDistance(rectangleCoordinates,detectedJawPositionsDictionary,pixelSampling,magnificationFactor)  
         
         #Show leaves detected on the image
-        reportLeaves={}
-        self.findLeafPixels(image,ax,detectedJawPositionsDictionary, rectangleCoordinates, 47,pixelSampling,magnificationFactor,reportLeaves)
-        reportLeavesSorted=dict(sorted(reportLeaves.items(),key=lambda item: item[1], reverse=True))
+        reportPositioningDeviations={}
+        reportAngleDeviations={}
+        self.findLeafPixels(image,ax,
+                            detectedJawPositionsDictionary, rectangleCoordinates, 
+                            47,
+                            pixelSampling,magnificationFactor,
+                            collimatorAngle,reportPositioningDeviations,reportAngleDeviations)
+        
+        reportPositioningDeviationsSorted=dict(sorted(reportPositioningDeviations.items(),key=lambda item: item[1], reverse=True))
+        reportAngleDeviationsSorted=dict(sorted(reportAngleDeviations.items(),key=lambda item: item[1], reverse=True))
         self.logger.info('**********Report*********')
         self.logger.info(report)
-        self.logger.info(reportLeaves)
+        self.logger.info(f'Leaves distance deviations from iso centerline:\n{reportPositioningDeviationsSorted}')
+        self.logger.info(f'Leaves angle deviations from iso centerline:\n{reportAngleDeviationsSorted}')
+        self.logger.info(f'Jaws detected descrepancies vs expected positions:\n{jawDiscrepancies}')
         
         
         ax.imshow(image,cmap='jet')
