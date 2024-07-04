@@ -118,14 +118,13 @@ class Controller:
         deviations={}
         i=0
         dicomFileModels=self.model.getDicomFileModels()
+        test=len(dicomFileModels)
         for dicomModel in dicomFileModels:
             i+=1
             for key,value in dicomModel.jawDiscrepancies.items():
-                if key in deviations:
-                    #key+=' DUPLICATED JAW DETECTED, image# '+str(i)
+                    key+='image#'+str(i)
                     deviations[key]=value
-                else:
-                    deviations[key]=value
+                
         sortedDeviations=dict(sorted(deviations.items(), key=lambda item:item[0],reverse=True))
         
         max_key, max_deviation = max(sortedDeviations.items(), key=lambda item: abs(float(item[1])))
