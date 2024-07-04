@@ -29,7 +29,6 @@
     <Compile Include="Helpers\MathHelper.py" />
     <Compile Include="Models\DICOMfileModel.py" />
     <Compile Include="Models\DICOMmodel.py" />
-    <Compile Include="module1.py" />
     <Compile Include="Views\MainView.py" />
   </ItemGroup>
   <ItemGroup>
@@ -39,6 +38,7 @@
     <Folder Include="Controllers\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="AnnualQA.spec" />
     <Content Include="PDtoolIcon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
