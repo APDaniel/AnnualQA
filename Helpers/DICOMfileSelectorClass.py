@@ -1,22 +1,23 @@
 import tkinter as tk
-from tkinter import filedialog as fd
-import logging
+from tkinter import filedialog
 
-class DICOMfileSelector:
-    def __init__(self,logger,title="Select a DICOM file", filetypes=None):
-        #Initialize the FileSelector
+class DICOMfileSelectorClass:
+    def __init__(self,logger,title='Please select a file', filetypes=[("All files","*")]):
         self.logger=logger
         self.title=title
-        self.filetypes=filetypes if filetypes else [("All files","*")]
+        self.filetypes=filetypes
+        
     def openFileDialog(self):
-        #Prompt user to select a file through the file dialog
         root=tk.Tk()
         root.withdraw()
-        filePath=fd.askopenfilename(title=self.title,filetypes=self.filetypes)
-        
-        if filePath:
-            self.logger.info(f"Selected file:{filePath}")
-        else:
-            self.logger.warning(f"No file selected...")
+        filePath=filedialog.askopenfilename(title=self.title,filetypes=self.filetypes)
+        root.destroy()
         return filePath
-
+    
+    def openFolderDialog(self):
+        root=tk.Tk()
+        root.withdraw()
+        folderPath=filedialog.askdirectory(title='Please select a folder')
+        root.destroy()
+        return folderPath
+    

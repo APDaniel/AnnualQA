@@ -3,6 +3,7 @@ import logging
 import logging.config
 from datetime import datetime
 import getpass
+from Views.MainView import TextHandler
 
 #Function to create/find a log directory
 def createLogDirectory():
@@ -47,9 +48,12 @@ def setupLogging():
             'annualQAtoolLogger':{
                 'level':'DEBUG',
                 'handlers':['console','file'],
-                'propogate':False}    
+                'propagate':False}    
             }
     }
+    
+    
+
     logging.config.dictConfig(loggingConfig)
     return logging.getLogger('annualQAtoolLogger')
     

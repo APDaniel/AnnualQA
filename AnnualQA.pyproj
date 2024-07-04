@@ -22,14 +22,24 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="AnnualQA.py" />
-    <Compile Include="DICOMparsers\DICOMimageParser.py" />
-    <Compile Include="Helpers\loggerSetup.py" />
+    <Compile Include="Controllers\LeafJawAlingmentController.py" />
     <Compile Include="Helpers\DICOMfileSelectorClass.py" />
+    <Compile Include="Helpers\DICOMimageParser.py" />
+    <Compile Include="Helpers\loggerSetup.py" />
     <Compile Include="Helpers\MathHelper.py" />
+    <Compile Include="Models\DICOMfileModel.py" />
+    <Compile Include="Models\DICOMmodel.py" />
+    <Compile Include="module1.py" />
+    <Compile Include="Views\MainView.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Helpers\" />
-    <Folder Include="DICOMparsers\" />
+    <Folder Include="Models\" />
+    <Folder Include="Views\" />
+    <Folder Include="Controllers\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="PDtoolIcon.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
