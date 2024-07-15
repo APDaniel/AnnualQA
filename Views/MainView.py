@@ -38,9 +38,7 @@ class View:
         self.controller=controller
         self.createWidgets()
         self.currentImageIndex=0
-        
-
-        
+  
     def createWidgets(self):
             PADX = 0
             PADY = 0
@@ -51,34 +49,28 @@ class View:
             testButtonsFrame=tk.Frame(self.root)
             testButtonsFrame.pack(side=tk.TOP,fill=tk.X,padx=PADX,pady=0)
             
+            additionalButtonsFrame=tk.Frame(self.root)
+            additionalButtonsFrame.pack(side=tk.TOP,fill=tk.X,padx=PADX,pady=0)
+            
             nextPrevImageButtonsFrame=tk.Frame(self.root)
             nextPrevImageButtonsFrame.pack(side=tk.TOP,fill=tk.BOTH,padx=PADX,pady=PADY)
             
             loggerFrame=tk.Frame(self.root)
             loggerFrame.pack(side=tk.BOTTOM,fill=tk.X,expand=True,padx=PADX,pady=PADY)
-            
-            
-            self.selectFolderButton = tk.Button(firstTwoButtonsFrame, text='Select DICOM Folder', command=self.controller.selectFolder)
-            self.selectFolderButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
-    
-            self.selectFileButton = tk.Button(firstTwoButtonsFrame, text='Select DICOM File     ', command=self.controller.selectFile)
-            self.selectFileButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
-            '''
-            self.leafAlingmentButton = tk.Button(testButtonsFrame, text='Run Leaf-Jaw Alignment Test', command=self.controller.processDicomFiles)
-            self.leafAlingmentButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
-            
-            self.jawAlingmentButton = tk.Button(testButtonsFrame, text='Run Jaw Alignment Test', command=self.controller.performJawAlignmentTest)
-            self.jawAlingmentButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
 
-            self.mlcJawCenterButton = tk.Button(testButtonsFrame,text='Run Jaw/MLC center Test', command=self.controller.performJawMlcCenterTest)
-            self.mlcJawCenterButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
+            buttonSelect={
+               'Select DICOM Folder':self.controller.selectFolder,
+               'Select DICOM File':self.controller.selectFile}
             
-            self.mlcJawCenterButton = tk.Button(testButtonsFrame,text='Run MLC leakage Test', command=self.controller.performMlcLeakageTest)
-            self.mlcJawCenterButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
-            '''
+            maxWidth=max(len(text) for text in buttonSelect.keys())
+            self.buttons=[]
+            for text, command in buttonSelect.items():
+                button=tk.Button(firstTwoButtonsFrame, text=text,width=maxWidth,command=command)
+                button.pack(side=tk.LEFT,expand=True,fill=tk.X,padx=0,pady=0)
+                self.buttons.append(button)
             
             buttonInfo={
-                'Run Leaf-Jaw Alignment Test':self.controller.processDicomFiles,
+                'Run Leaf/Jaw Alignment Test':self.controller.processDicomFiles,
                 'Run Jaw Alignment Test':self.controller.performJawAlignmentTest,
                 'Run Jaw/MLC center Test':self.controller.performJawMlcCenterTest,
                 'Run MLC leakage Test': self.controller.performMlcLeakageTest}
@@ -89,12 +81,30 @@ class View:
                 button=tk.Button(testButtonsFrame, text=text,width=maxWidth,command=command)
                 button.pack(side=tk.LEFT,expand=True,fill=tk.X,padx=0,pady=0)
                 self.buttons.append(button)
+
+            buttonAdditional={
+                #'Organize DICOM piexl data':self.controller.organizeDicomFiles
+                }
             
-            self.nextImageButton=tk.Button(nextPrevImageButtonsFrame, text='>>', command=self.showNextImage)
-            self.nextImageButton.pack(side=tk.RIGHT, expand=True, fill=tk.X)
+            maxWidth=0#max(len(text) for text in buttonAdditional.keys())
+            self.buttons=[]
+            for text, command in buttonAdditional.items():
+                button=tk.Button(additionalButtonsFrame, text=text,width=maxWidth,command=command)
+                button.pack(side=tk.LEFT,expand=True,fill=tk.X,padx=0,pady=0)
+                self.buttons.append(button)
+
+            buttonNextPrev={
+               '<<':self.showPrevImage,
+               '>>':self.showNextImage
+               }
             
-            self.prevImageButton=tk.Button(nextPrevImageButtonsFrame, text='<<', command=self.showPrevImage)
-            self.prevImageButton.pack(side=tk.LEFT, expand=True, fill=tk.X)
+            maxWidth=max(len(text) for text in buttonNextPrev.keys())
+            self.buttons=[]
+            for text, command in buttonNextPrev.items():
+                button=tk.Button(nextPrevImageButtonsFrame, text=text,width=maxWidth,command=command)
+                button.pack(side=tk.LEFT,expand=True,fill=tk.X,padx=0,pady=0)
+                self.buttons.append(button)
+                
 
             self.figure, self.ax = plt.subplots()
             plt.tight_layout()
@@ -186,7 +196,7 @@ class View:
         #Draw leaf positions
         imageParser._findLeafPixels(image,ax,
                             detectedJawPositionsDictionary, rectangleCoordinates, 
-                            47,
+                            39,
                             pixelSampling,magnificationFactor,
                             collimatorAngle,reportPositioningDeviations,reportAngleDeviations)
         
@@ -299,11 +309,14 @@ class View:
         return
    
     def displayDeviationsReport(self,deviationsReport):
-        self.logOutput.config(state='normal')
-        self.logOutput.delete(1.0,tk.END)
-        for leaf,deviation in deviationsReport.items():
-            self.logOutput.insert(tk.END, f'{leaf}:{deviation}\n')
-        self.logOutput.config(state='disabled')
+        try:
+            self.logOutput.config(state='normal')
+            self.logOutput.delete(1.0,tk.END)
+            for leaf,deviation in deviationsReport.items():
+                self.logOutput.insert(tk.END, f'{leaf}: {deviation}\n')
+            self.logOutput.config(state='disabled')
+        except Exception as ex:
+            self.logOutput.insert(tk.END, f'Cannot display report. Error: {ex}. No leaves detected?')
         
     def displayCenterlTestImageReport(self, distanceDiscrepancyMm):
         self.logOutput.config(state='normal')

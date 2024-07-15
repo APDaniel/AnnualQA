@@ -39,6 +39,20 @@ class Controller:
             self.view.displayDeviationsReport(self.collectLeafDeviations())
         else:
             self.view.showMessage('No folder selected or no DICOM files found')
+            
+    def organizeDicomFiles(self):
+        threading.Thread(target=self._organizeDicomFiles).start()
+        
+    def _organizeDicomFiles(self):
+        self.model.dicomFileModels.clear()
+        result=self.model.organizeDICOMfilesFunction()
+        if result:
+            self.view.showMessage('The DICOM files with pixel data have been organized and are ready for processing')
+            modelToDisplay=self.model.getCurrentDicomImageModel()
+            imageParser=self.model.dicomImageParser    
+            self.view.displayImage(modelToDisplay,imageParser,self.logger)
+        else:
+            self.view.showMessage('No folder selected or no DICOM files found')    
     
     def performJawAlignmentTest(self):
         threading.Thread(target=self._performJawAlignmentTest).start()    
@@ -107,18 +121,21 @@ class Controller:
                     deviations[key]=value
                 else:
                     deviations[key]=value
-        sortedDeviations=dict(sorted(deviations.items(), key=lambda item:item[1],reverse=True))
-        
-        max_key, max_deviation = max(sortedDeviations.items(), key=lambda item: abs(float(item[1])))
-        
-        sortedDeviations['\nMax deviation detected for ']=f'{key} {max_deviation}deg'
-        return sortedDeviations
+        sortedDeviations=dict(sorted(deviations.items(), key=lambda item:self.split_key(item[0])))
+        try:
+            max_key, max_deviation = max(sortedDeviations.items(), key=lambda item: abs(float(item[1])))
+        except:
+            self.logger.error('No leaves detected...')
+            return
+        newSortedDeviations={'Max deviation detected for':f'{max_key} {max_deviation}deg\n'}
+        newSortedDeviations.update(sortedDeviations)
+        newSortedDeviations = {key.replace(':', ''): value for key, value in newSortedDeviations.items()}
+        return newSortedDeviations
     
     def collectJawDeviations(self):
         deviations={}
         i=0
         dicomFileModels=self.model.getDicomFileModels()
-        test=len(dicomFileModels)
         for dicomModel in dicomFileModels:
             i+=1
             for key,value in dicomModel.jawDiscrepancies.items():
@@ -132,6 +149,12 @@ class Controller:
         sortedDeviations['\nMax deviation detected for ']=f'{key} {max_deviation}mm'
         
         return sortedDeviations
+    
+    def split_key(self,key):
+        match = re.match(r"([A-Za-z]+)-(\d+)", key)
+        if match:
+            return match.groups()[0], int(match.groups()[1])
+        return key, 0
     
     def main(self):
         self.view.main()

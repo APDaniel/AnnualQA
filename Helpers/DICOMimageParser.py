@@ -626,6 +626,7 @@ class DicomImageParser:
                        thresholdPercent,pixelSampling,
                        magnificationFactor,collimatorAngle,
                        reportPositioningDeviations,reportAngleDeviations):
+        
         maxIntensity=np.max(image)
         thresholdValue=maxIntensity*thresholdPercent/100
         
@@ -661,7 +662,7 @@ class DicomImageParser:
 
         #Apply Density-based spatial clustering of applications with noise
         if len(lowIntensityPoints)>0:
-            db=DBSCAN(eps=5,min_samples=5).fit(lowIntensityPoints)  
+            db=DBSCAN(eps=1,min_samples=5).fit(lowIntensityPoints)  
             labels=db.labels_
             uniqueLabels=set(labels)
             for k in uniqueLabels:
@@ -708,7 +709,9 @@ class DicomImageParser:
                 
                 #Determine leaf number 
                 y1centerPoint=(point4[0]+point3[0])/2, (point4[1]+point3[1])/2
-                y2centerPoint=(point1[0]+point1[0])/2, (point2[1]+point2[1])/2
+                #y2centerPoint=(point1[0]+point1[0])/2, (point2[1]+point2[1])/2
+                
+                y2centerPoint=(point2[0]+point1[0])/2, (point2[1]+point1[1])/2
                 
                 distanceToY1=np.sqrt((y1centerPoint[1]-centerY)**2+(y1centerPoint[0]-centerX)**2)
                 distanceToY2=np.sqrt((y2centerPoint[1]-centerY)**2+(y2centerPoint[0]-centerX)**2)  
@@ -717,7 +720,7 @@ class DicomImageParser:
                     leafNumber=31
                     while distance>0:
                         leafNumber=leafNumber-1
-                        if distance>100*magnificationFactor:
+                        if distance>105*magnificationFactor:
                               distance-=10*magnificationFactor
                         else:
                               distance-=5*magnificationFactor  
@@ -835,7 +838,7 @@ class DicomImageParser:
         
         self._findLeafPixels(image,ax,
                             detectedJawPositionsDictionary, rectangleCoordinates, 
-                            47,
+                            39,
                             pixelSampling,magnificationFactor,
                             collimatorAngle,reportPositioningDeviations,reportAngleDeviations)
         
