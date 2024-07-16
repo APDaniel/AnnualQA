@@ -1,4 +1,5 @@
 import io
+import os
 import sys
 import threading
 import tkinter as tk
@@ -33,7 +34,9 @@ class View:
         self.root.title('PD Annual QA Tool')
         self.root.geometry('900x600')
         
-        icon_image=tk.PhotoImage(file=r'C:\Users\Danie\Desktop\Python\AnnualQAProject\AnnualQA\PDtoolIcon.png')
+        base_path=os.path.abspath('.')
+        icon_path=os.path.join(base_path, 'PDtoolIcon.png')
+        icon_image=tk.PhotoImage(file=icon_path)
         self.root.iconphoto(False, icon_image)
         self.controller=controller
         self.createWidgets()

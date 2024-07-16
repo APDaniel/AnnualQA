@@ -16,7 +16,7 @@ a = Analysis(
     ['AnnualQA.py'],
     pathex=['.'],
     binaries=[],
-    datas=datas,
+    datas=[('PDtoolIcon.png', 'PDtoolIcon.png')],
     hiddenimports=hiddenimports + ['pydicom.encoders.gdcm', 'gdcm', 'pydicom.encoders'],
     hookspath=[],
     runtime_hooks=[],
@@ -41,7 +41,7 @@ exe = EXE(
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
-    icon=r'C:\\Users\\Danie\\Desktop\\IconPDtool.jpg',
+    icon='PDtoolIcon.png'
 )
 
 coll = COLLECT(
