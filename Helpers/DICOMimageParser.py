@@ -1113,6 +1113,10 @@ class DicomImageParser:
                                  f'with MLC image intensity of {intensity1}')
         meanDeviation=meanDeviation/i
 
+        combinedPixelArray=np.concatenate((referenceDICOMimage/np.max(referenceDICOMimage), 
+                                           comparisonDICOMimage/np.max(comparisonDICOMimage)), 
+                                          axis=1)
+
 
         return DicomFileModel(_metadata=None,
                           _jawPositions=None,
@@ -1122,7 +1126,7 @@ class DicomImageParser:
                           _pixelSampling=None,
                           _leafPositionDeviations=None,
                           _leafAngleDeviations=None,
-                          _image=referenceDICOMimage,
+                          _image=combinedPixelArray,
                           _sidSadTuple=None,
                           _referenceImageCenter=None,
                           _comparisonImageCenter=None,

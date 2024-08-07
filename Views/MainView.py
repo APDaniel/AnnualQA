@@ -300,12 +300,19 @@ class View:
             return
         
         mlcDeviationPixel=dicomModel.mlcDeviationPixel
+        
         ax.scatter(mlcDeviationPixel[1],
                     mlcDeviationPixel[0],
                     color='black',s=150,marker='x',
                     label='Max deviation')
+        ax.scatter(mlcDeviationPixel[1]+1024,
+                    mlcDeviationPixel[0],
+                    color='black',s=150,marker='x',
+                    label=None
+                    )
 
-        ax.imshow(image,cmap='jet')      
+        ax.imshow(image,cmap='jet')     
+        ax.axis('off')
         ax.legend(loc='upper left',bbox_to_anchor=(1,1))
         
         self.canvas.draw()
