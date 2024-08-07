@@ -147,6 +147,15 @@ class DicomImageParser:
             else:
                 self.logger.error('No collimator angle found in the DICOM file')
                 return 
+    
+    def _findRescaleSlope(self, filePath):
+        try:
+            dicomData=pydicom.dcmread(filePath)
+            rescaleSlope=dicomData.get("RescaleSlope", "N/A")
+        except Exception as ex:
+            self.logger.error(f"Error: {ex}")
+            return
+        return rescaleSlope
             
     def _findCollimatorAngleCustomDICOM(self,dicomDataset): #Capture collimator angle from custom DICOM 
         if not dicomDataset:
@@ -1024,6 +1033,8 @@ class DicomImageParser:
         self.logger.info(f'Capturing data for the MLC filed: {self.dicomPath}')
         referenceFilePath=self.dicomPath
         referenceDICOMimage=self._loadDICOMimage(referenceFilePath)
+        referenceRescaleSlope=self._findRescaleSlope(referenceFilePath)
+        referenceDICOMimage=referenceDICOMimage
         referenceImageCenter=self._findCenterImage(referenceDICOMimage)
         
         if np.max(referenceDICOMimage):
@@ -1042,6 +1053,8 @@ class DicomImageParser:
         self.logger.info(f'Capturing data for the open filed: {self.dicomPath}')
         comparisonDICOMdataset=self._loadCustomDICOMdataset(comparisonFilePath)
         comparisonDICOMimage=self._loadDICOMimage(comparisonFilePath)
+        comparisonRescaleSlope=self._findRescaleSlope(comparisonFilePath)
+        comparisonDICOMimage=comparisonDICOMimage
         comparisonImageCenter=self._findCenterImage(comparisonDICOMimage)
         
         if np.max(referenceDICOMimage):
@@ -1085,9 +1098,11 @@ class DicomImageParser:
         meanDeviation=0
         for y,x in zip(pixelsAboveThreshold[0], pixelsAboveThreshold[1]):
             intensity1=referenceDICOMimage[y,x]
+            intensity1=intensity1*referenceRescaleSlope
             intensity2=comparisonDICOMimage[y,x]
-            pixelDeviation=intensity1/(intensity2/100)
-            if pixelDeviation>0.5:
+            intensity2=intensity2*comparisonRescaleSlope
+            pixelDeviation=(intensity1/intensity2)*100
+            if pixelDeviation>0:
                 meanDeviation+=pixelDeviation
                 i+=1
                 if pixelDeviation>pixelDeviationPercentage:
